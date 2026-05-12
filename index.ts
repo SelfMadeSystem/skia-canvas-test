@@ -118,8 +118,16 @@ class Paddle {
     this.goToPos(canvas.height / 2);
   }
 
+  getEdgeX() {
+    if (this.position.x < canvas.width / 2) {
+      return this.position.x + this.width;
+    } else {
+      return this.position.x;
+    }
+  }
+
   goToPredicted(edge: number | null) {
-    const predictedY = ball.getPredictedY(this.position.x);
+    const predictedY = ball.getPredictedY(this.getEdgeX());
     this.goToPos(predictedY, edge);
   }
 
@@ -278,21 +286,26 @@ const ball = new Ball(new Vec2(400, 300), 10, [leftPaddle, rightPaddle], score);
 
 let prevTime = performance.now();
 let timeAccumulator = 0;
-const tickTime = 1000 / 60; // 60 TPS
+const tickTime = 1000 / 60;
+const superTickTime = tickTime / 1000;
+
+let superSpeed = false;
 
 function gameLoop() {
   const currentTime = performance.now();
   const deltaTime = currentTime - prevTime;
   timeAccumulator += deltaTime;
 
-  while (timeAccumulator >= tickTime) {
+  const tTime = superSpeed ? superTickTime : tickTime;
+
+  while (timeAccumulator >= tTime) {
     leftPaddle.tick();
     rightPaddle.tick();
     ball.tick();
-    timeAccumulator -= tickTime;
+    timeAccumulator -= tTime;
   }
 
-  const partialTick = timeAccumulator / tickTime;
+  const partialTick = timeAccumulator / tTime;
 
   prevTime = currentTime;
 
@@ -323,6 +336,9 @@ function handleKeyDown(event: KeyboardEventProps) {
     case "ArrowDown":
       rightPaddle.down = true;
       break;
+    case "Space":
+      superSpeed = !superSpeed;
+      break;
   }
 }
 
@@ -346,3 +362,6 @@ function handleKeyUp(event: KeyboardEventProps) {
 window.on("keyup", handleKeyUp);
 window.on("keydown", handleKeyDown);
 window.on("frame", gameLoop);
+window.on("close", () => {
+  process.exit(0);
+});
