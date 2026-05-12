@@ -1,0 +1,17 @@
+{
+  "name": "skia-canvas-test",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.2.14"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "skia-canvas": "^3.0.8",
+    "vec2": "./vec2"
+  }
+}
