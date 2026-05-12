@@ -64,12 +64,19 @@ class Paddle {
   ) {}
 
   intersecting(ball: Ball) {
-    return (
-      ball.position.x + ball.radius > this.position.x &&
-      ball.position.x - ball.radius < this.position.x + this.width &&
-      ball.position.y + ball.radius > this.position.y &&
-      ball.position.y - ball.radius < this.position.y + this.height
+    // Swept AABB collision detection
+    const nextPos = ball.position.add(ball.velocity);
+    const closestX = Math.max(
+      this.position.x,
+      Math.min(nextPos.x, this.position.x + this.width),
     );
+    const closestY = Math.max(
+      this.position.y,
+      Math.min(nextPos.y, this.position.y + this.height),
+    );
+    const distanceX = nextPos.x - closestX;
+    const distanceY = nextPos.y - closestY;
+    return distanceX * distanceX + distanceY * distanceY < ball.radius * ball.radius;
   }
 
   goToPos(posY: number, edge: number | null = null) {
@@ -83,9 +90,12 @@ class Paddle {
       } else {
         this.up = false;
         this.down = false;
-      } 
+      }
     } else {
-      if (posY < this.centerY) {
+      if (Math.abs(posY - this.centerY) < 10) {
+        this.up = false;
+        this.down = false;
+      } else if (posY < this.centerY) {
         this.up = true;
         this.down = false;
       } else {
@@ -140,6 +150,7 @@ class Paddle {
 
 class Ball {
   public velocity: Vec2 = new Vec2(0, 0);
+  public prevPosition: Vec2 = new Vec2(0, 0);
 
   constructor(
     public position: Vec2,
@@ -152,6 +163,7 @@ class Ball {
 
   reset() {
     this.position = new Vec2(canvas.width / 2, canvas.height / 2);
+    this.prevPosition = this.position.clone();
     const angle = random(-Math.PI / 4, Math.PI / 4) + (rand01() ? Math.PI : 0);
     const speed = 7;
     this.velocity = new Vec2(Math.cos(angle) * speed, Math.sin(angle) * speed);
@@ -176,26 +188,27 @@ class Ball {
     return !this.goingAwayFrom(x);
   }
 
-  getPredictedY(x: number) {
-    const timeToReachPaddle = Math.abs((x - this.position.x) / this.velocity.x);
-    let predictedY = this.position.y + this.velocity.y * timeToReachPaddle;
+  getPredictedY(destX: number) {
+    const ticksToWall = (destX - this.position.x) / this.velocity.x;
 
-    // Account for wall bounces
-    while (
-      predictedY < this.radius ||
-      predictedY > canvas.height - this.radius
-    ) {
-      if (predictedY < this.radius) {
-        predictedY = this.radius + (this.radius - predictedY);
-      } else if (predictedY > canvas.height - this.radius) {
-        predictedY =
-          canvas.height -
-          this.radius -
-          (predictedY - (canvas.height - this.radius));
+    let { x, y } = this.position;
+    let velX = this.velocity.x;
+    let velY = this.velocity.y;
+
+    for (let i = 0; i < ticksToWall; i++) {
+      x += velX;
+      y += velY;
+
+      if (y - this.radius < 0) {
+        y = this.radius;
+        velY *= -1;
+      } else if (y + this.radius > canvas.height) {
+        y = canvas.height - this.radius;
+        velY *= -1;
       }
     }
 
-    return predictedY;
+    return y;
   }
 
   draw() {
@@ -206,12 +219,16 @@ class Ball {
   }
 
   tick() {
+    this.prevPosition = this.position.clone();
     this.position.x += this.velocity.x;
     this.position.y += this.velocity.y;
-    if (
-      (this.position.y - this.radius < 0 && this.velocity.y < 0) ||
-      (this.position.y + this.radius > canvas.height && this.velocity.y > 0)
-    ) {
+
+    if (this.position.y - this.radius < 0) {
+      this.position.y = this.radius;
+      this.velocity.y *= -1;
+    }
+    if (this.position.y + this.radius > canvas.height) {
+      this.position.y = canvas.height - this.radius;
       this.velocity.y *= -1;
     }
 
@@ -220,7 +237,7 @@ class Ball {
         const paddleHeight =
           (this.position.y - paddle.position.y) / paddle.height;
         this.bounce(paddleHeight);
-        break;
+        return;
       }
     }
 
@@ -241,9 +258,13 @@ class Ball {
 const leftPaddle = new Paddle(new Vec2(50, 250), 10, 100, {
   predict: true,
   center: true,
-  edge: 1,
+  edge: 15,
 });
-const rightPaddle = new Paddle(new Vec2(740, 250), 10, 100);
+const rightPaddle = new Paddle(new Vec2(740, 250), 10, 100, {
+  predict: true,
+  center: true,
+  edge: 15,
+});
 const score = new Score();
 const ball = new Ball(new Vec2(400, 300), 10, [leftPaddle, rightPaddle], score);
 
