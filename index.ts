@@ -1,5 +1,5 @@
 import { Window, type KeyboardEventProps } from "skia-canvas";
-import { Vec2 } from "./vec2";
+import { Vec2 } from "vec2";
 
 const window = new Window(800, 600, {
   background: "black",
