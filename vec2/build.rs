@@ -67,6 +67,22 @@ fn parse_exports(src: &str) -> Vec<FfiExport> {
         });
     }
 
+    // binary_fn_scalar!(vec2_lerp, lerp);
+    let binary_fn_scalar_re = Regex::new(r"binary_fn_scalar!\((\w+),\s*(\w+)\);")
+        .expect("Failed to compile binary_fn_scalar regex");
+    for cap in binary_fn_scalar_re.captures_iter(src) {
+        let name = cap[1].to_string();
+        exports.push(FfiExport {
+            name,
+            args: vec![
+                "pointer".to_string(),
+                "pointer".to_string(),
+                "f32".to_string(),
+            ],
+            returns: "pointer".to_string(),
+        });
+    }
+
     // scalar_binary_op!(vec2_dot, dot);
     let scalar_binary_op_re = Regex::new(r"scalar_binary_op!\((\w+),\s*(\w+)\);")
         .expect("Failed to compile scalar_binary_op regex");
@@ -147,7 +163,7 @@ fn generate_index_ts(exports: &[FfiExport]) {
     );
 
     content.push_str("const { f32, pointer } = FFIType;\n\n");
-    content.push_str("const libPath = `./target/release/libvec2.${suffix}`\n\n");
+    content.push_str("const libPath = new URL(`./target/release/libvec2.${suffix}`, import.meta.url);\n\n");
     content.push_str("export const { symbols } = dlopen(libPath, {\n");
 
     for (i, export) in exports.iter().enumerate() {

@@ -4,7 +4,7 @@ import { dlopen, FFIType, suffix } from 'bun:ffi'
 
 const { f32, pointer } = FFIType;
 
-const libPath = new URL(`./target/release/libvec2.${suffix}`, import.meta.url).pathname;
+const libPath = new URL(`./target/release/libvec2.${suffix}`, import.meta.url);
 
 export const { symbols } = dlopen(libPath, {
     vec2_new: {
@@ -55,12 +55,20 @@ export const { symbols } = dlopen(libPath, {
         args: [pointer],
         returns: f32,
     },
+    vec2_lerp: {
+        args: [pointer, pointer, f32],
+        returns: pointer,
+    },
     vec2_max: {
         args: [pointer, pointer],
         returns: pointer,
     },
     vec2_min: {
         args: [pointer, pointer],
+        returns: pointer,
+    },
+    vec2_move_towards: {
+        args: [pointer, pointer, f32],
         returns: pointer,
     },
     vec2_mul: {

@@ -111,6 +111,24 @@ macro_rules! scalar_unary_op {
     };
 }
 
+// Binary fn with scalar macro: takes two Vec2 pointers and an f32, returns a new Vec2 pointer
+macro_rules! binary_fn_scalar {
+    ($name:ident, $method:ident) => {
+        #[unsafe(no_mangle)]
+        pub extern "C" fn $name(a: *const c_void, b: *const c_void, s: f32) -> *mut c_void {
+            if a.is_null() || b.is_null() {
+                return std::ptr::null_mut();
+            }
+            let res = unsafe {
+                let ra = &*(a as *const Vec2);
+                let rb = &*(b as *const Vec2);
+                Box::new(ra.$method(*rb, s))
+            };
+            Box::into_raw(res) as *mut c_void
+        }
+    };
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn vec2_new(x: f32, y: f32) -> *mut c_void {
     let v = Box::new(Vec2::new(x, y));
@@ -143,6 +161,9 @@ binary_fn!(vec2_project_onto, project_onto);
 binary_fn!(vec2_project_onto_normalized, project_onto_normalized);
 binary_fn!(vec2_reject_from, reject_from);
 binary_fn!(vec2_reject_from_normalized, reject_from_normalized);
+
+binary_fn_scalar!(vec2_lerp, lerp);
+binary_fn_scalar!(vec2_move_towards, move_towards);
 
 scalar_binary_op!(vec2_dot, dot);
 scalar_binary_op!(vec2_distance, distance);

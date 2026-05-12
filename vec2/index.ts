@@ -150,6 +150,14 @@ export class Vec2 {
         return Vec2.fromHandle(requireSymbols().vec2_abs(this.handle));
     }
 
+    lerp(other: Vec2, s: number) {
+        return Vec2.fromHandle(requireSymbols().vec2_lerp(this.handle, other.handle, s));
+    }
+
+    moveTowards(target: Vec2, delta: number) {
+        return Vec2.fromHandle(requireSymbols().vec2_move_towards(this.handle, target.handle, delta));
+    }
+
     toString() {
         return `Vec2(${this.x}, ${this.y})`;
     }

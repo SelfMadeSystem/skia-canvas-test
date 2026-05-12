@@ -37,6 +37,7 @@ type AiConfig = {
 };
 
 class Paddle {
+  public prevPosition: Vec2;
   public up = false;
   public down = false;
 
@@ -61,7 +62,9 @@ class Paddle {
     public width: number,
     public height: number,
     public ai: AiConfig | null = null,
-  ) {}
+  ) {
+    this.prevPosition = position.clone();
+  }
 
   intersecting(ball: Ball) {
     // Swept AABB collision detection
@@ -76,7 +79,9 @@ class Paddle {
     );
     const distanceX = nextPos.x - closestX;
     const distanceY = nextPos.y - closestY;
-    return distanceX * distanceX + distanceY * distanceY < ball.radius * ball.radius;
+    return (
+      distanceX * distanceX + distanceY * distanceY < ball.radius * ball.radius
+    );
   }
 
   goToPos(posY: number, edge: number | null = null) {
@@ -131,6 +136,7 @@ class Paddle {
   }
 
   tick() {
+    this.prevPosition = this.position.clone();
     if (this.ai) {
       this.tickAi();
     }
@@ -142,9 +148,10 @@ class Paddle {
     }
   }
 
-  draw() {
+  draw(partialTick: number) {
     ctx.fillStyle = "white";
-    ctx.fillRect(this.position.x, this.position.y, this.width, this.height);
+    const pos = this.prevPosition.lerp(this.position, partialTick);
+    ctx.fillRect(pos.x, pos.y, this.width, this.height);
   }
 }
 
@@ -211,10 +218,11 @@ class Ball {
     return y;
   }
 
-  draw() {
+  draw(partialTick: number) {
+    const pos = this.prevPosition.lerp(this.position, partialTick);
     ctx.fillStyle = "white";
     ctx.beginPath();
-    ctx.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
+    ctx.arc(pos.x, pos.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -270,7 +278,7 @@ const ball = new Ball(new Vec2(400, 300), 10, [leftPaddle, rightPaddle], score);
 
 let prevTime = performance.now();
 let timeAccumulator = 0;
-const tickTime = 1000 / 60; // 60 FPS
+const tickTime = 1000 / 60; // 60 TPS
 
 function gameLoop() {
   const currentTime = performance.now();
@@ -284,12 +292,14 @@ function gameLoop() {
     timeAccumulator -= tickTime;
   }
 
+  const partialTick = timeAccumulator / tickTime;
+
   prevTime = currentTime;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  leftPaddle.draw();
-  rightPaddle.draw();
-  ball.draw();
+  leftPaddle.draw(partialTick);
+  rightPaddle.draw(partialTick);
+  ball.draw(partialTick);
   score.draw();
   ctx.strokeStyle = "white";
   ctx.lineWidth = 2;
