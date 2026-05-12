@@ -30,6 +30,12 @@ class Score {
   }
 }
 
+type AiConfig = {
+  predict: boolean;
+  center: boolean;
+  edge: number | null;
+};
+
 class Paddle {
   public up = false;
   public down = false;
@@ -38,17 +44,90 @@ class Paddle {
     return (this.down ? 5 : 0) - (this.up ? 5 : 0);
   }
 
+  get centerY() {
+    return this.position.y + this.height / 2;
+  }
+
+  get topY() {
+    return this.position.y;
+  }
+
+  get bottomY() {
+    return this.position.y + this.height;
+  }
+
   constructor(
     public position: Vec2,
     public width: number,
     public height: number,
+    public ai: AiConfig | null = null,
   ) {}
 
+  intersecting(ball: Ball) {
+    return (
+      ball.position.x + ball.radius > this.position.x &&
+      ball.position.x - ball.radius < this.position.x + this.width &&
+      ball.position.y + ball.radius > this.position.y &&
+      ball.position.y - ball.radius < this.position.y + this.height
+    );
+  }
+
+  goToPos(posY: number, edge: number | null = null) {
+    if (edge !== null) {
+      if (posY < this.topY + edge) {
+        this.up = true;
+        this.down = false;
+      } else if (posY > this.bottomY - edge) {
+        this.up = false;
+        this.down = true;
+      } else {
+        this.up = false;
+        this.down = false;
+      } 
+    } else {
+      if (posY < this.centerY) {
+        this.up = true;
+        this.down = false;
+      } else {
+        this.up = false;
+        this.down = true;
+      }
+    }
+  }
+
+  goToBall(edge: number | null) {
+    this.goToPos(ball.position.y, edge);
+  }
+
+  goToCenter() {
+    this.goToPos(canvas.height / 2);
+  }
+
+  goToPredicted(edge: number | null) {
+    const predictedY = ball.getPredictedY(this.position.x);
+    this.goToPos(predictedY, edge);
+  }
+
+  tickAi() {
+    if (!this.ai) return;
+
+    if (this.ai.center && ball.goingAwayFrom(this.position.x)) {
+      this.goToCenter();
+    } else if (this.ai.predict) {
+      this.goToPredicted(this.ai.edge);
+    } else {
+      this.goToBall(this.ai.edge);
+    }
+  }
+
   tick() {
+    if (this.ai) {
+      this.tickAi();
+    }
     this.position.y += this.velocity;
-    if (this.position.y < 0) {
+    if (this.topY < 0) {
       this.position.y = 0;
-    } else if (this.position.y + this.height > canvas.height) {
+    } else if (this.bottomY > canvas.height) {
       this.position.y = canvas.height - this.height;
     }
   }
@@ -86,6 +165,39 @@ class Ball {
     this.velocity.y = Math.sin(angle) * speed;
   }
 
+  goingAwayFrom(x: number) {
+    return (
+      (this.velocity.x < 0 && this.position.x < x) ||
+      (this.velocity.x > 0 && this.position.x > x)
+    );
+  }
+
+  goingTowards(x: number) {
+    return !this.goingAwayFrom(x);
+  }
+
+  getPredictedY(x: number) {
+    const timeToReachPaddle = Math.abs((x - this.position.x) / this.velocity.x);
+    let predictedY = this.position.y + this.velocity.y * timeToReachPaddle;
+
+    // Account for wall bounces
+    while (
+      predictedY < this.radius ||
+      predictedY > canvas.height - this.radius
+    ) {
+      if (predictedY < this.radius) {
+        predictedY = this.radius + (this.radius - predictedY);
+      } else if (predictedY > canvas.height - this.radius) {
+        predictedY =
+          canvas.height -
+          this.radius -
+          (predictedY - (canvas.height - this.radius));
+      }
+    }
+
+    return predictedY;
+  }
+
   draw() {
     ctx.fillStyle = "white";
     ctx.beginPath();
@@ -97,19 +209,14 @@ class Ball {
     this.position.x += this.velocity.x;
     this.position.y += this.velocity.y;
     if (
-      this.position.y - this.radius < 0 ||
-      this.position.y + this.radius > canvas.height
+      (this.position.y - this.radius < 0 && this.velocity.y < 0) ||
+      (this.position.y + this.radius > canvas.height && this.velocity.y > 0)
     ) {
       this.velocity.y *= -1;
     }
 
     for (const paddle of this.paddles) {
-      if (
-        this.position.x - this.radius < paddle.position.x + paddle.width &&
-        this.position.x + this.radius > paddle.position.x &&
-        this.position.y + this.radius > paddle.position.y &&
-        this.position.y - this.radius < paddle.position.y + paddle.height
-      ) {
+      if (paddle.intersecting(this) && this.goingTowards(paddle.position.x)) {
         const paddleHeight =
           (this.position.y - paddle.position.y) / paddle.height;
         this.bounce(paddleHeight);
@@ -131,7 +238,11 @@ class Ball {
   }
 }
 
-const leftPaddle = new Paddle(new Vec2(50, 250), 10, 100);
+const leftPaddle = new Paddle(new Vec2(50, 250), 10, 100, {
+  predict: true,
+  center: true,
+  edge: 1,
+});
 const rightPaddle = new Paddle(new Vec2(740, 250), 10, 100);
 const score = new Score();
 const ball = new Ball(new Vec2(400, 300), 10, [leftPaddle, rightPaddle], score);
