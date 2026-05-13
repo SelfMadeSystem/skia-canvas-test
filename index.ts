@@ -287,7 +287,7 @@ const ball = new Ball(new Vec2(400, 300), 10, [leftPaddle, rightPaddle], score);
 let prevTime = performance.now();
 let timeAccumulator = 0;
 const tickTime = 1000 / 60;
-const superTickTime = tickTime / 1000;
+const superTickTime = tickTime / 10;
 
 let superSpeed = false;
 

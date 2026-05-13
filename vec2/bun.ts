@@ -1,12 +1,11 @@
 ///<reference types="bun-types" />
-
-import { dlopen, FFIType, suffix } from 'bun:ffi'
+///<reference types="./types.d.ts" />
+import linuxLibPath from './target/release/libvec2.so' with { type: 'file' };
+import { dlopen, FFIType } from 'bun:ffi'
 
 const { f32, pointer } = FFIType;
 
-const libPath = new URL(`./target/release/libvec2.${suffix}`, import.meta.url);
-
-export const { symbols } = dlopen(libPath, {
+export const { symbols } = dlopen(linuxLibPath, {
     vec2_new: {
         args: [f32, f32],
         returns: pointer,
