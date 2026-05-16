@@ -179,7 +179,7 @@ class Ball {
   reset() {
     this.position = new Vec2(canvas.width / 2, canvas.height / 2);
     this.prevPosition = this.position.clone();
-    const angle = random(-Math.PI / 4, Math.PI / 4) + (rand01() ? Math.PI : 0);
+    const angle = random(-Math.PI / 4, Math.PI / 4) + (rand01() * Math.PI);
     const speed = 7;
     this.velocity = new Vec2(Math.cos(angle) * speed, Math.sin(angle) * speed);
   }
