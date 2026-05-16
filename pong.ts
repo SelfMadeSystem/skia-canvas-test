@@ -276,11 +276,7 @@ const leftPaddle = new Paddle(new Vec2(50, 250), 10, 100, {
   center: true,
   edge: 15,
 });
-const rightPaddle = new Paddle(new Vec2(740, 250), 10, 100, {
-  predict: true,
-  center: true,
-  edge: 15,
-});
+const rightPaddle = new Paddle(new Vec2(740, 250), 10, 100);
 const score = new Score();
 const ball = new Ball(new Vec2(400, 300), 10, [leftPaddle, rightPaddle], score);
 
